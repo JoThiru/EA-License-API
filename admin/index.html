@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EA License Admin</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>EA License Manager</h1>
+
+    <!-- 🧾 License Form -->
+    <div class="form">
+      <input type="text" id="licenseKey" placeholder="License Key" />
+      <input type="text" id="accountId" placeholder="Account ID" />
+      <input type="text" id="hardwareId" placeholder="Hardware ID" />
+      <input type="date" id="expiry" />
+      <select id="status">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <button id="addLicense">Add License</button>
+    </div>
+
+    <!-- 🧩 License Table -->
+    <h2>All Licenses</h2>
+    <table id="licensesTable">
+      <thead>
+        <tr>
+          <th>License Key</th>
+          <th>Account ID</th>
+          <th>Hardware ID</th>
+          <th>Expiry</th>
+          <th>Status</th>
+          <th>Created At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- JS -->
+  <script type="module" src="./dashboard.js"></script>
+</body>
+</html>
