@@ -1,7 +1,3 @@
 {
-  "version": 2,
-  "framework": "node",
-  "buildCommand": "npm install",
-  "outputDirectory": ".",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ."
+  "version": 2
 }
