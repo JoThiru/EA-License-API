@@ -2,11 +2,13 @@
 node_modules/
 package-lock.json
 
-# Environment variables
+# Environment variables (NEVER COMMIT THESE!)
 .env
 .env.local
+.env.production
 .env*.local
 admin/config.js
+admin/config.prod.js
 
 # Build outputs
 dist/
@@ -35,4 +37,17 @@ desktop.ini
 # Temporary files
 *.tmp
 .temp/
+
+# Test files (if you create any)
+test-results/
+coverage/
+
+# Database files (if running local DB)
+*.db
+*.sqlite
+*.sqlite3
+
+# Debug files
+debug.log
+.DS_Store?
 

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login - EA License Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 50px;
+      width: 100%;
+      max-width: 450px;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo h1 {
+      color: #2d3748;
+      font-size: 2rem;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .logo p {
+      color: #718096;
+      font-size: 0.95rem;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2d3748;
+      font-size: 14px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      padding: 15px 45px 15px 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .input-wrapper input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: #718096;
+      transition: color 0.3s ease;
+      padding: 5px;
+    }
+
+    .toggle-password:hover {
+      color: #667eea;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background: #fed7d7;
+      border-left: 4px solid #f56565;
+      color: #c53030;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #718096;
+      font-size: 14px;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 30px;
+      }
+
+      .logo h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">
+      <h1>🔐 Admin Login</h1>
+      <p>EA License Manager</p>
+    </div>
+
+    <div id="errorMessage" class="error-message"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="password">Admin Password</label>
+        <div class="input-wrapper">
+          <input 
+            type="password" 
+            id="password" 
+            placeholder="Enter admin password"
+            required
+            autocomplete="current-password"
+          />
+          <button type="button" class="toggle-password" id="togglePassword">
+            👁️
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" id="loginBtn">
+        Login
+      </button>
+    </form>
+
+    <div class="footer">
+      <p>Protected Area - Authorized Access Only</p>
+    </div>
+  </div>
+
+  <script type="module">
+    const loginForm = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const togglePassword = document.getElementById('togglePassword');
+
+    // OPTIMIZED: Check if already logged in (local check first!)
+    const checkAuth = async () => {
+      const sessionToken = localStorage.getItem('admin_session');
+      const sessionExpiry = localStorage.getItem('admin_session_expires');
+      
+      if (sessionToken && sessionExpiry) {
+        // Fast local check: Is token still valid?
+        const now = Date.now();
+        if (now < parseInt(sessionExpiry)) {
+          // Token is still valid, redirect immediately (no API call needed!)
+          window.location.replace('/admin/dashboard');
+          return true;
+        } else {
+          // Token expired, clear it
+          localStorage.removeItem('admin_session');
+          localStorage.removeItem('admin_session_expires');
+        }
+      }
+      return false;
+    };
+
+    // Show error message
+    const showError = (message) => {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+      setTimeout(() => {
+        errorMessage.classList.remove('show');
+      }, 5000);
+    };
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    // Handle login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = passwordInput.value.trim();
+      
+      if (!password) {
+        showError('Please enter your password');
+        return;
+      }
+
+      // Disable form
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<span class="spinner"></span> Logging in...';
+
+      try {
+        const response = await fetch('/api/admin/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ password }),
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store session token
+          localStorage.setItem('admin_session', data.sessionToken);
+          localStorage.setItem('admin_session_expires', data.expiresAt);
+          
+          // Fast redirect (replace is faster than href)
+          window.location.replace('/admin/dashboard');
+        } else {
+          showError(data.message || 'Invalid password');
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      } catch (err) {
+        showError('Login failed. Please try again.');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = 'Login';
+      }
+    });
+
+    // Check auth on load
+    checkAuth();
+
+    // Focus password field
+    passwordInput.focus();
+  </script>
+</body>
+</html>
+

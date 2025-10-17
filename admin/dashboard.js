@@ -1,8 +1,58 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+// OPTIMIZED Admin Dashboard - Fast & Secure
+// Session management with local validation first
+let sessionToken = localStorage.getItem('admin_session');
+let sessionExpiry = localStorage.getItem('admin_session_expires');
+let isAuthenticated = false;
 
-// Create a single supabase client for interacting with your database
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// OPTIMIZED: Check expiry locally first (no API call needed!)
+async function checkAuth() {
+  if (!sessionToken || !sessionExpiry) {
+    redirectToLogin();
+    return false;
+  }
+
+  // Fast local check: Is token expired?
+  const now = Date.now();
+  if (now > parseInt(sessionExpiry)) {
+    redirectToLogin();
+    return false;
+  }
+
+  // Token is valid locally, skip API verification
+  // Real verification happens on first API call
+  isAuthenticated = true;
+  return true;
+}
+
+function redirectToLogin() {
+  localStorage.removeItem('admin_session');
+  localStorage.removeItem('admin_session_expires');
+  window.location.replace('/admin/login'); // Faster than .href
+}
+
+// API helper with authentication
+async function authenticatedFetch(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${sessionToken}`,
+    ...options.headers
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include'
+  });
+
+  // Handle unauthorized
+  if (response.status === 401) {
+    showNotification('error', 'Session Expired', 'Please login again');
+    setTimeout(redirectToLogin, 1500);
+    throw new Error('Unauthorized');
+  }
+
+  return response;
+}
 
 // Elements
 const tableBody = document.querySelector('#licensesTable tbody');
@@ -13,6 +63,7 @@ const closeModal = document.querySelector('.close');
 const cancelEdit = document.getElementById('cancelEdit');
 const saveEdit = document.getElementById('saveEdit');
 const notificationContainer = document.getElementById('notificationContainer');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // Delete modal elements
 const deleteModal = document.getElementById('deleteModal');
@@ -109,22 +160,23 @@ confirmDelete.addEventListener('click', async () => {
   confirmDelete.textContent = '🗑️ Deleting...';
   
   try {
-    const { error } = await supabase
-      .from('licenses')
-      .delete()
-      .eq('license_key', currentDeleteLicenseKey);
+    const response = await authenticatedFetch(`/api/admin/licenses/delete?licenseKey=${encodeURIComponent(currentDeleteLicenseKey)}`, {
+      method: 'DELETE'
+    });
 
-    if (error) {
-      console.error('Delete error:', error);
-      showNotification('error', 'Delete Failed', 'Failed to delete license.');
-    } else {
-      showNotification('success', 'License Deleted', 'License deleted successfully.');
+    const data = await response.json();
+
+    if (response.ok) {
+      showNotification('success', 'License Deleted', data.message || 'License deleted successfully.');
       closeDeleteModalFunc();
       loadLicenses();
+    } else {
+      showNotification('error', 'Delete Failed', data.message || 'Failed to delete license.');
     }
   } catch (err) {
-    console.error('Unexpected error:', err);
-    showNotification('error', 'Unexpected Error', 'An unexpected error occurred: ' + err.message);
+    if (err.message !== 'Unauthorized') {
+      showNotification('error', 'Unexpected Error', 'An unexpected error occurred');
+    }
   } finally {
     confirmDelete.disabled = false;
     confirmDelete.textContent = '🗑️ Delete License';
@@ -170,63 +222,72 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// 🟢 Load all licenses from Supabase
+// OPTIMIZED: Load licenses with loading indicator
 async function loadLicenses() {
-  console.log("🟡 Loading licenses...");
+  // Show loading indicator
+  if (tableBody) {
+    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><div style="font-size: 20px; margin-bottom: 10px;">⏳</div><div>Loading licenses...</div></td></tr>';
+  }
   
   try {
-  const { data, error } = await supabase
-    .from('licenses')
-    .select('*')
-    .order('created_at', { ascending: false });
+    const response = await authenticatedFetch('/api/admin/licenses/list');
+    const result = await response.json();
 
-    console.log("🟢 Supabase Data:", data);
-    console.log("🔴 Supabase Error:", error);
-
-  if (error) {
-    console.error('Error fetching licenses:', error);
-      showNotification('error', 'Error Loading Licenses', error.message);
+    if (!response.ok) {
+      showNotification('error', 'Error Loading Licenses', result.message || 'Failed to load licenses');
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading licenses</td></tr>';
+      }
       return;
     }
+    
+    const data = result.data;
     
     if (!tableBody) {
-      console.error('Table body element not found!');
-    return;
-  }
-
-  tableBody.innerHTML = '';
-    
-    if (!data || data.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="7" style="text-align: center; padding: 20px;">No licenses found</td>';
-      tableBody.appendChild(tr);
       return;
     }
 
-  data.forEach(row => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td>${row.license_key || 'N/A'}</td>
-        <td>${row.account_id || 'N/A'}</td>
-        <td>${row.hardware_id || 'N/A'}</td>
-        <td>${row.expiry_date || 'N/A'}</td>
-        <td>${row.status || 'N/A'}</td>
+    if (!data || data.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No licenses found</td></tr>';
+      return;
+    }
+
+    // OPTIMIZED: Use DocumentFragment for single DOM update
+    const fragment = document.createDocumentFragment();
+    
+    data.forEach(row => {
+      const tr = document.createElement('tr');
+      // Escape HTML to prevent XSS
+      const esc = str => String(str || 'N/A').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+      
+      tr.innerHTML = `
+        <td>${esc(row.license_key)}</td>
+        <td>${esc(row.account_id)}</td>
+        <td>${esc(row.hardware_id)}</td>
+        <td>${esc(row.expiry_date)}</td>
+        <td>${esc(row.status)}</td>
         <td>${row.created_at ? new Date(row.created_at).toLocaleString() : 'N/A'}</td>
         <td>
-          <button onclick="editLicense('${row.license_key}', '${row.account_id}', '${row.hardware_id}', '${row.expiry_date}', '${row.status}')">✏️ Edit</button>
-          <button onclick="deleteLicense('${row.license_key}', '${row.account_id}', '${row.hardware_id}')">🗑️ Delete</button>
+          <button onclick="editLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.hardware_id)}', '${esc(row.expiry_date)}', '${esc(row.status)}')">✏️ Edit</button>
+          <button onclick="deleteLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.hardware_id)}')">🗑️ Delete</button>
         </td>
-    `;
-    tableBody.appendChild(tr);
-  });
+      `;
+      fragment.appendChild(tr);
+    });
     
-    console.log('Licenses loaded successfully');
+    // Single DOM update for better performance
+    tableBody.innerHTML = '';
+    tableBody.appendChild(fragment);
     
-    // Update scroll indicators after loading
-    setTimeout(updateScrollIndicators, 100);
+    // Update scroll indicators
+    requestAnimationFrame(updateScrollIndicators);
+    
   } catch (err) {
-    console.error('Unexpected error loading licenses:', err);
-    showNotification('error', 'Unexpected Error', 'Failed to load licenses: ' + err.message);
+    if (err.message !== 'Unauthorized') {
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading data</td></tr>';
+      }
+    }
   }
 }
 
@@ -235,66 +296,48 @@ addBtn.addEventListener('click', async () => {
   const licenseKey = document.getElementById('licenseKey').value.trim();
   const accountId = document.getElementById('accountId').value.trim();
   const hardwareId = document.getElementById('hardwareId').value.trim();
-  const expiry = document.getElementById('expiry').value;
+  const expiryDate = document.getElementById('expiry').value;
   const status = document.getElementById('status').value;
 
-  // 1️⃣ Validate
-  if (!licenseKey || !accountId || !hardwareId || !expiry) {
+  // Validate
+  if (!licenseKey || !accountId || !hardwareId || !expiryDate) {
     showNotification('warning', 'Validation Error', 'Please fill all fields before adding a license.');
     return;
   }
 
-  // 2️⃣ Check for existing license key
-  const { data: existingKey } = await supabase
-    .from('licenses')
-    .select('license_key')
-    .eq('license_key', licenseKey)
-    .maybeSingle();
-
-  if (existingKey) {
-    showNotification('warning', 'Duplicate License Key', `License key "${licenseKey}" already exists.`);
-    return;
-  }
-
-  // 3️⃣ Check for existing hardware ID + account ID combination
-  const { data: existingCombination } = await supabase
-    .from('licenses')
-    .select('hardware_id, account_id')
-    .eq('hardware_id', hardwareId)
-    .eq('account_id', accountId)
-    .maybeSingle();
-
-  if (existingCombination) {
-    showNotification('warning', 'Duplicate Combination', `This combination of Hardware ID "${hardwareId}" and Account ID "${accountId}" already exists.`);
-    return;
-  }
-
-  // 4️⃣ Disable button
+  // Disable button
   addBtn.disabled = true;
   addBtn.textContent = 'Adding...';
 
-  // 5️⃣ Insert license
-  const { error } = await supabase.from('licenses').insert([{
-    license_key: licenseKey,
-    account_id: accountId,
-    hardware_id: hardwareId,
-    expiry_date: expiry,
-    status: status,
-    created_at: new Date().toISOString()
-  }]);
+  try {
+    const response = await authenticatedFetch('/api/admin/licenses/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        licenseKey,
+        accountId,
+        hardwareId,
+        expiryDate,
+        status
+      })
+    });
 
-  if (error) {
-    console.error('Insert error:', error);
-    showNotification('error', 'Error Adding License', error.message);
-  } else {
-    showNotification('success', 'License Added', 'License added successfully!');
-    clearForm();
-    loadLicenses();
+    const data = await response.json();
+
+    if (response.ok) {
+      showNotification('success', 'License Added', data.message || 'License added successfully!');
+      clearForm();
+      loadLicenses();
+    } else {
+      showNotification('error', 'Error Adding License', data.message || 'Failed to add license');
+    }
+  } catch (err) {
+    if (err.message !== 'Unauthorized') {
+      showNotification('error', 'Error Adding License', 'Failed to add license');
+    }
+  } finally {
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add License';
   }
-
-  // 6️⃣ Enable button again
-  addBtn.disabled = false;
-  addBtn.textContent = 'Add License';
 });
 
 // 🧹 Clear input fields
@@ -366,59 +409,56 @@ editForm.addEventListener('submit', async (e) => {
   saveEdit.textContent = '💾 Saving...';
   
   try {
-    // Check for duplicate hardware ID + account ID combination (excluding current license)
-    const { data: existingCombination } = await supabase
-      .from('licenses')
-      .select('hardware_id, account_id')
-      .eq('hardware_id', hardwareId)
-      .eq('account_id', accountId)
-      .neq('license_key', licenseKey)
-      .maybeSingle();
-
-    if (existingCombination) {
-      showNotification('warning', 'Duplicate Combination', `This combination of Hardware ID "${hardwareId}" and Account ID "${accountId}" already exists in another license.`);
-      saveEdit.disabled = false;
-      saveEdit.textContent = '💾 Save Changes';
-      return;
-    }
-    
-    // Update license
-  const { error } = await supabase
-    .from('licenses')
-      .update({
-        account_id: accountId,
-        hardware_id: hardwareId,
-        expiry_date: expiryDate,
-        status: status
+    const response = await authenticatedFetch('/api/admin/licenses/update', {
+      method: 'PUT',
+      body: JSON.stringify({
+        licenseKey,
+        accountId,
+        hardwareId,
+        expiryDate,
+        status
       })
-    .eq('license_key', licenseKey);
+    });
 
-  if (error) {
-      console.error('Update error:', error);
-      showNotification('error', 'Update Failed', 'Error updating license: ' + error.message);
-  } else {
-      showNotification('success', 'License Updated', 'License updated successfully!');
+    const data = await response.json();
+
+    if (response.ok) {
+      showNotification('success', 'License Updated', data.message || 'License updated successfully!');
       closeEditModal();
-    loadLicenses();
+      loadLicenses();
+    } else {
+      showNotification('error', 'Update Failed', data.message || 'Error updating license');
     }
   } catch (err) {
-    console.error('Unexpected error:', err);
-    showNotification('error', 'Unexpected Error', 'An unexpected error occurred: ' + err.message);
+    if (err.message !== 'Unauthorized') {
+      showNotification('error', 'Update Error', 'Failed to update license');
+    }
   } finally {
     saveEdit.disabled = false;
     saveEdit.textContent = '💾 Save Changes';
   }
 });
 
-// Load data on startup
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, initializing dashboard...');
-  
-  // Handle any unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    console.warn('Unhandled promise rejection:', event.reason);
-    // Don't prevent the default behavior, just log it
+// Logout functionality
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await authenticatedFetch('/api/admin/auth/logout', {
+        method: 'POST'
+      });
+    } catch (err) {
+      // Silent fail, redirect anyway
+    } finally {
+      redirectToLogin();
+    }
   });
-  
-loadLicenses();
+}
+
+// Load data on startup
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check authentication first, then load licenses
+  const authenticated = await checkAuth();
+  if (authenticated) {
+    loadLicenses();
+  }
 });
