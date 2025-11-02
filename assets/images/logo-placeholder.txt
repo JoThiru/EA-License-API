@@ -1,0 +1,5 @@
+Please replace this file with your company logo image.
+Supported formats: PNG, SVG, JPG
+Recommended: PNG with transparent background or SVG
+Preferred size: 200x50px for header, 32x32px for favicon
+

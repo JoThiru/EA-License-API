@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlgoLicense - Client Dashboard</title>
+  <link rel="icon" type="image/png" href="/assets/images/logo-favicon.png" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <img src="/assets/images/Logo.png" alt="AlgoLicense" class="logo-image" onerror="this.onerror=null; this.style.display='none';">
+          <span class="logo-text">ALGOLICENSE</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" id="logoutBtn">
+          <span class="nav-icon">←</span>
+          <span class="nav-text">Logout</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="content-header">
+        <div class="header-left">
+          <h1 class="page-title">License Request</h1>
+        </div>
+        <div class="header-right">
+          <label class="theme-toggle-switch" title="Toggle theme">
+            <input type="checkbox" id="themeToggle" />
+            <span class="toggle-slider">
+              <span class="toggle-icon"></span>
+            </span>
+            <span class="toggle-label" id="themeToggleLabel">Light Mode</span>
+          </label>
+          <div class="user-info">
+            <div class="profile-dropdown">
+              <div class="profile-trigger" id="profileTrigger">
+                <span class="user-email" id="userEmail"></span>
+                <span class="user-avatar">👤</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+              <div class="profile-menu" id="profileMenu">
+                <div class="profile-menu-item" id="profileEmail">
+                  <span class="menu-label">Signed in as</span>
+                  <span class="menu-value" id="menuUserEmail"></span>
+                </div>
+                <div class="profile-menu-divider"></div>
+                <div class="profile-menu-item logout-item" id="logoutBtnProfile">
+                  <span class="menu-icon">←</span>
+                  <span>Logout</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Section -->
+      <div class="content-section">
+        <!-- License Request Form Card -->
+        <div class="form-card">
+          <h3>Request New License</h3>
+          
+          <div id="successMessage" class="success-message" style="display: none;">
+            ✅ License request submitted successfully! Your license key will be sent after admin approval.
+          </div>
+
+          <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+          <form id="licenseRequestForm" class="license-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="accountNumber">Account Number *</label>
+                <input 
+                  type="text" 
+                  id="accountNumber" 
+                  name="accountNumber" 
+                  placeholder="Enter your account number" 
+                  required 
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="accountServer">Account Server *</label>
+                <input 
+                  type="text" 
+                  id="accountServer" 
+                  name="accountServer" 
+                  placeholder="Enter account server" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="eaName">EA Name *</label>
+                <input 
+                  type="text" 
+                  id="eaName" 
+                  name="eaName" 
+                  placeholder="Enter EA name" 
+                  required 
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="hardwareId">Hardware ID *</label>
+                <input 
+                  type="text" 
+                  id="hardwareId" 
+                  name="hardwareId" 
+                  placeholder="Enter hardware ID" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" id="submitBtn">
+                Generate License Key Request
+              </button>
+            </div>
+          </form>
+
+          <div id="licenseKeyDisplay" class="license-key-display" style="display: none;">
+            <h4>Your Generated License Key</h4>
+            <div class="key-container">
+              <div class="key" id="generatedLicenseKey"></div>
+              <button type="button" class="copy-btn" id="copyLicenseBtn" title="Copy license key">
+                <span class="copy-icon">📋</span>
+                <span class="copy-text">Copy</span>
+              </button>
+            </div>
+            <div id="copyFeedback" class="copy-feedback" style="display: none;">✓ Copied to clipboard!</div>
+            <p class="key-note">
+              This license key has been submitted for admin approval. You'll be notified once it's approved.
+            </p>
+          </div>
+        </div>
+
+        <!-- My Licenses Card -->
+        <div class="table-card">
+          <div class="section-header">
+            <h2>My Licenses</h2>
+          </div>
+          <div class="table-wrapper">
+            <div id="licensesList">
+              <p class="no-data">Loading your licenses...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="./theme.js"></script>
+  <script type="module" src="./dashboard.js"></script>
+</body>
+</html>
+
+
