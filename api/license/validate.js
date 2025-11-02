@@ -6,16 +6,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST')
     return res.status(405).json({ error: 'Method not allowed' });
 
-  const { licenseKey, accountId, hardwareId } = req.body;
+  const { licenseKey, accountId, accountServer, hardwareId, ea_name } = req.body;
 
-  console.log("🟡 Request Received:", licenseKey, accountId, hardwareId);
+  console.log("🟡 Request Received:", licenseKey, accountId, accountServer, hardwareId, ea_name);
 
   const { data, error } = await supabase
     .from('licenses')
     .select('*')
     .eq('license_key', licenseKey)
     .eq('account_id', accountId.toString())
+    .eq('account_server', accountServer)
     .eq('hardware_id', hardwareId)
+    .eq('ea_name', ea_name)
     .single();
 
   console.log("🟢 Supabase Data:", data);

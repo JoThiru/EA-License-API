@@ -57,13 +57,19 @@ async function authenticatedFetch(url, options = {}) {
 // Elements
 const tableBody = document.querySelector('#licensesTable tbody');
 const addBtn = document.getElementById('addLicense');
+const addLicenseForm = document.getElementById('addLicenseForm');
+const licenseForm = document.getElementById('licenseForm');
+const cancelAddBtn = document.getElementById('cancelAdd');
 const editModal = document.getElementById('editModal');
 const editForm = document.getElementById('editForm');
-const closeModal = document.querySelector('.close');
+const closeModal = document.querySelectorAll('.close');
 const cancelEdit = document.getElementById('cancelEdit');
 const saveEdit = document.getElementById('saveEdit');
 const notificationContainer = document.getElementById('notificationContainer');
 const logoutBtn = document.getElementById('logoutBtn');
+const totalLicensesEl = document.getElementById('totalLicenses');
+const activeLicensesEl = document.getElementById('activeLicenses');
+const expiredLicensesEl = document.getElementById('expiredLicenses');
 
 // Delete modal elements
 const deleteModal = document.getElementById('deleteModal');
@@ -72,7 +78,9 @@ const cancelDelete = document.getElementById('cancelDelete');
 const confirmDelete = document.getElementById('confirmDelete');
 const deleteLicenseKey = document.getElementById('deleteLicenseKey');
 const deleteAccountId = document.getElementById('deleteAccountId');
+const deleteAccountServer = document.getElementById('deleteAccountServer');
 const deleteHardwareId = document.getElementById('deleteHardwareId');
+const deleteEaName = document.getElementById('deleteEaName');
 
 // 🔔 Notification System
 function showNotification(type, title, message, duration = 4000) {
@@ -126,11 +134,13 @@ window.removeNotification = removeNotification;
 // 🗑️ Delete Modal Management
 let currentDeleteLicenseKey = null;
 
-function showDeleteModal(licenseKey, accountId, hardwareId) {
+function showDeleteModal(licenseKey, accountId, accountServer, hardwareId, eaName) {
   currentDeleteLicenseKey = licenseKey;
   deleteLicenseKey.textContent = licenseKey;
   deleteAccountId.textContent = accountId;
+  deleteAccountServer.textContent = accountServer || 'N/A';
   deleteHardwareId.textContent = hardwareId;
+  deleteEaName.textContent = eaName || 'N/A';
   
   deleteModal.style.display = 'block';
   document.body.style.overflow = 'hidden';
@@ -226,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadLicenses() {
   // Show loading indicator
   if (tableBody) {
-    tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><div style="font-size: 20px; margin-bottom: 10px;">⏳</div><div>Loading licenses...</div></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px;"><div style="font-size: 20px; margin-bottom: 10px;">⏳</div><div>Loading licenses...</div></td></tr>';
   }
   
   try {
@@ -236,7 +246,7 @@ async function loadLicenses() {
     if (!response.ok) {
       showNotification('error', 'Error Loading Licenses', result.message || 'Failed to load licenses');
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading licenses</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading licenses</td></tr>';
       }
       return;
     }
@@ -248,7 +258,7 @@ async function loadLicenses() {
     }
 
     if (!data || data.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No licenses found</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">No licenses found</td></tr>';
       return;
     }
 
@@ -263,13 +273,15 @@ async function loadLicenses() {
       tr.innerHTML = `
         <td>${esc(row.license_key)}</td>
         <td>${esc(row.account_id)}</td>
+        <td>${esc(row.account_server || 'N/A')}</td>
         <td>${esc(row.hardware_id)}</td>
+        <td>${esc(row.ea_name || 'N/A')}</td>
         <td>${esc(row.expiry_date)}</td>
-        <td>${esc(row.status)}</td>
+        <td><span class="status-${row.status === 'active' ? 'active' : 'inactive'}">${esc(row.status)}</span></td>
         <td>${row.created_at ? new Date(row.created_at).toLocaleString() : 'N/A'}</td>
         <td>
-          <button onclick="editLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.hardware_id)}', '${esc(row.expiry_date)}', '${esc(row.status)}')">✏️ Edit</button>
-          <button onclick="deleteLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.hardware_id)}')">🗑️ Delete</button>
+          <button onclick="editLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.account_server || '')}', '${esc(row.hardware_id)}', '${esc(row.ea_name || '')}', '${esc(row.expiry_date)}', '${esc(row.status)}')">✏️ Edit</button>
+          <button onclick="deleteLicense('${esc(row.license_key)}', '${esc(row.account_id)}', '${esc(row.account_server || '')}', '${esc(row.hardware_id)}', '${esc(row.ea_name || '')}')">🗑️ Delete</button>
         </td>
       `;
       fragment.appendChild(tr);
@@ -282,84 +294,129 @@ async function loadLicenses() {
     // Update scroll indicators
     requestAnimationFrame(updateScrollIndicators);
     
+    // Update summary cards
+    updateSummaryCards(data);
+    
   } catch (err) {
     if (err.message !== 'Unauthorized') {
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading data</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: #f56565;">❌ Error loading data</td></tr>';
       }
     }
   }
 }
 
-// 🟢 Add new license
-addBtn.addEventListener('click', async () => {
-  const licenseKey = document.getElementById('licenseKey').value.trim();
-  const accountId = document.getElementById('accountId').value.trim();
-  const hardwareId = document.getElementById('hardwareId').value.trim();
-  const expiryDate = document.getElementById('expiry').value;
-  const status = document.getElementById('status').value;
-
-  // Validate
-  if (!licenseKey || !accountId || !hardwareId || !expiryDate) {
-    showNotification('warning', 'Validation Error', 'Please fill all fields before adding a license.');
-    return;
-  }
-
-  // Disable button
-  addBtn.disabled = true;
-  addBtn.textContent = 'Adding...';
-
-  try {
-    const response = await authenticatedFetch('/api/admin/licenses/create', {
-      method: 'POST',
-      body: JSON.stringify({
-        licenseKey,
-        accountId,
-        hardwareId,
-        expiryDate,
-        status
-      })
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      showNotification('success', 'License Added', data.message || 'License added successfully!');
-      clearForm();
-      loadLicenses();
-    } else {
-      showNotification('error', 'Error Adding License', data.message || 'Failed to add license');
+// Toggle add license form
+if (addBtn) {
+  addBtn.addEventListener('click', () => {
+    if (addLicenseForm) {
+      addLicenseForm.style.display = addLicenseForm.style.display === 'none' ? 'block' : 'none';
+      if (addLicenseForm.style.display === 'block') {
+        addLicenseForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
-  } catch (err) {
-    if (err.message !== 'Unauthorized') {
-      showNotification('error', 'Error Adding License', 'Failed to add license');
+  });
+}
+
+// Cancel add license
+if (cancelAddBtn) {
+  cancelAddBtn.addEventListener('click', () => {
+    if (addLicenseForm) {
+      addLicenseForm.style.display = 'none';
     }
-  } finally {
-    addBtn.disabled = false;
-    addBtn.textContent = 'Add License';
-  }
-});
+    clearForm();
+  });
+}
+
+// Form submission handler
+if (licenseForm) {
+  licenseForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const licenseKey = document.getElementById('licenseKey').value.trim();
+    const accountId = document.getElementById('accountId').value.trim();
+    const accountServer = document.getElementById('accountServer').value.trim();
+    const hardwareId = document.getElementById('hardwareId').value.trim();
+    const eaName = document.getElementById('eaName').value.trim();
+    const expiryDate = document.getElementById('expiry').value;
+    const status = document.getElementById('status').value;
+
+    // Validate
+    if (!licenseKey || !accountId || !accountServer || !hardwareId || !eaName || !expiryDate) {
+      showNotification('warning', 'Validation Error', 'Please fill all fields before adding a license.');
+      return;
+    }
+
+    // Disable button
+    const submitBtn = licenseForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+    }
+
+    try {
+      const response = await authenticatedFetch('/api/admin/licenses/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          licenseKey,
+          accountId,
+          accountServer,
+          hardwareId,
+          ea_name: eaName,
+          expiryDate,
+          status
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showNotification('success', 'License Added', data.message || 'License added successfully!');
+        clearForm();
+        if (addLicenseForm) {
+          addLicenseForm.style.display = 'none';
+        }
+        loadLicenses();
+      } else {
+        showNotification('error', 'Error Adding License', data.message || 'Failed to add license');
+      }
+    } catch (err) {
+      if (err.message !== 'Unauthorized') {
+        showNotification('error', 'Error Adding License', 'Failed to add license');
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add License';
+      }
+    }
+  });
+}
 
 // 🧹 Clear input fields
 function clearForm() {
   document.getElementById('licenseKey').value = '';
   document.getElementById('accountId').value = '';
+  document.getElementById('accountServer').value = '';
   document.getElementById('hardwareId').value = '';
+  document.getElementById('eaName').value = '';
   document.getElementById('expiry').value = '';
   document.getElementById('status').value = 'active';
 }
 
 // 🟠 Delete a license (shows custom modal)
-window.deleteLicense = (licenseKey, accountId, hardwareId) => {
-  showDeleteModal(licenseKey, accountId, hardwareId);
+window.deleteLicense = (licenseKey, accountId, accountServer, hardwareId, eaName) => {
+  showDeleteModal(licenseKey, accountId, accountServer, hardwareId, eaName);
 };
 
 // 🔵 Edit license modal
-window.editLicense = (licenseKey, accountId, hardwareId, expiryDate, status) => {
+window.editLicense = (licenseKey, accountId, accountServer, hardwareId, eaName, expiryDate, status) => {
   // Populate form with current values
   document.getElementById('editLicenseKey').value = licenseKey;
   document.getElementById('editAccountId').value = accountId;
+  document.getElementById('editAccountServer').value = accountServer || '';
   document.getElementById('editHardwareId').value = hardwareId;
+  document.getElementById('editEaName').value = eaName || '';
   document.getElementById('editExpiry').value = expiryDate;
   
   // Set radio button based on status
@@ -373,14 +430,49 @@ window.editLicense = (licenseKey, accountId, hardwareId, expiryDate, status) => 
   document.body.style.overflow = 'hidden'; // Prevent background scrolling
 };
 
+// Update summary cards
+function updateSummaryCards(licenses) {
+  if (!licenses || !Array.isArray(licenses)) return;
+  
+  const total = licenses.length;
+  const active = licenses.filter(l => l.status === 'active').length;
+  
+  const today = new Date();
+  const expired = licenses.filter(l => {
+    if (l.status !== 'active') return false;
+    const expiry = new Date(l.expiry_date);
+    return expiry < today;
+  }).length;
+  
+  if (totalLicensesEl) totalLicensesEl.textContent = total;
+  if (activeLicensesEl) activeLicensesEl.textContent = active;
+  if (expiredLicensesEl) expiredLicensesEl.textContent = expired;
+}
+
 // Modal event listeners
-closeModal.addEventListener('click', closeEditModal);
-cancelEdit.addEventListener('click', closeEditModal);
-window.addEventListener('click', (event) => {
-  if (event.target === editModal) {
-    closeEditModal();
-  }
-});
+if (closeModal.length > 0) {
+  closeModal.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (e.target.id === 'closeDeleteModal') {
+        closeDeleteModalFunc();
+      } else {
+        closeEditModal();
+      }
+    });
+  });
+}
+
+if (cancelEdit) {
+  cancelEdit.addEventListener('click', closeEditModal);
+}
+
+if (editModal) {
+  window.addEventListener('click', (event) => {
+    if (event.target === editModal) {
+      closeEditModal();
+    }
+  });
+}
 
 function closeEditModal() {
   editModal.style.display = 'none';
@@ -394,12 +486,14 @@ editForm.addEventListener('submit', async (e) => {
   
   const licenseKey = document.getElementById('editLicenseKey').value;
   const accountId = document.getElementById('editAccountId').value.trim();
+  const accountServer = document.getElementById('editAccountServer').value.trim();
   const hardwareId = document.getElementById('editHardwareId').value.trim();
+  const eaName = document.getElementById('editEaName').value.trim();
   const expiryDate = document.getElementById('editExpiry').value;
   const status = document.querySelector('input[name="editStatus"]:checked').value;
   
   // Validate
-  if (!accountId || !hardwareId || !expiryDate) {
+  if (!accountId || !accountServer || !hardwareId || !eaName || !expiryDate) {
     showNotification('warning', 'Validation Error', 'Please fill all fields.');
     return;
   }
@@ -414,7 +508,9 @@ editForm.addEventListener('submit', async (e) => {
       body: JSON.stringify({
         licenseKey,
         accountId,
+        accountServer,
         hardwareId,
+        ea_name: eaName,
         expiryDate,
         status
       })

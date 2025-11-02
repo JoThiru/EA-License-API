@@ -6,49 +6,171 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>EA License Admin</title>
-  <link rel="stylesheet" href="./style.css?v=9&t=1737036000" />
+  <title>AlgoLicense - Admin Dashboard</title>
+  <link rel="stylesheet" href="./style.css?v=10&t=1737036000" />
 </head>
 <body>
-  <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h1 style="margin: 0;">EA License Manager</h1>
-      <button id="logoutBtn" style="padding: 10px 20px; background: #f56565; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
-        🚪 Logout
-      </button>
-    </div>
+  <div class="dashboard-container">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">🤖</span>
+          <span class="logo-text">ALGOLICENSE</span>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <a href="#" class="nav-item active">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">ADMIN</div>
+          <a href="#" class="nav-item">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text">Licenses</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="nav-icon">🔧</span>
+            <span class="nav-text">Settings</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <a href="#" class="nav-item" id="logoutBtn">
+            <span class="nav-icon">←</span>
+            <span class="nav-text">Logout</span>
+          </a>
+        </div>
+      </nav>
+    </aside>
 
-    <!-- 🧾 License Form -->
-    <div class="form">
-      <input type="text" id="licenseKey" placeholder="License Key" />
-      <input type="text" id="accountId" placeholder="Account ID" />
-      <input type="text" id="hardwareId" placeholder="Hardware ID" />
-      <input type="date" id="expiry" />
-      <select id="status">
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-      <button id="addLicense">Add License</button>
-    </div>
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="content-header">
+        <div class="header-left">
+          <h1>Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-generate-report">Generate Report</button>
+          <div class="user-info">
+            <span class="notification-icon">🔔</span>
+            <span class="user-email">admin@algolicense.com</span>
+            <span class="user-avatar">👤</span>
+          </div>
+        </div>
+      </header>
 
-    <!-- 🧩 License Table -->
-    <h2>All Licenses</h2>
-    <div class="table-container">
-      <table id="licensesTable">
-        <thead>
-          <tr>
-            <th>License Key</th>
-            <th>Account ID</th>
-            <th>Hardware ID</th>
-            <th>Expiry</th>
-            <th>Status</th>
-            <th>Created At</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="card-content">
+            <div class="card-label green">TOTAL LICENSES</div>
+            <div class="card-value green" id="totalLicenses">0</div>
+          </div>
+          <div class="card-icon">📋</div>
+        </div>
+        
+        <div class="summary-card">
+          <div class="card-content">
+            <div class="card-label blue">ACTIVE LICENSES</div>
+            <div class="card-value blue" id="activeLicenses">0</div>
+          </div>
+          <div class="card-icon">✅</div>
+        </div>
+        
+        <div class="summary-card">
+          <div class="card-content">
+            <div class="card-label blue">EXPIRED LICENSES</div>
+            <div class="card-value blue" id="expiredLicenses">0</div>
+          </div>
+          <div class="card-icon">⏰</div>
+        </div>
+      </div>
+
+      <!-- License Management Section -->
+      <div class="content-section">
+        <div class="section-header">
+          <h2>License Management</h2>
+          <button class="btn-primary" id="addLicense">+ Add New License</button>
+        </div>
+
+        <!-- Add License Form (Initially Hidden) -->
+        <div class="form-card" id="addLicenseForm" style="display: none;">
+          <h3>Add New License</h3>
+          <form class="license-form" id="licenseForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label>License Key</label>
+                <input type="text" id="licenseKey" placeholder="Enter license key" required />
+              </div>
+              <div class="form-group">
+                <label>Account ID</label>
+                <input type="text" id="accountId" placeholder="Enter account ID" required />
+              </div>
+              <div class="form-group">
+                <label>Account Server</label>
+                <input type="text" id="accountServer" placeholder="Enter account server" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hardware ID</label>
+                <input type="text" id="hardwareId" placeholder="Enter hardware ID" required />
+              </div>
+              <div class="form-group">
+                <label>EA Name</label>
+                <input type="text" id="eaName" placeholder="Enter EA name" required />
+              </div>
+              <div class="form-group">
+                <label>Expiry Date</label>
+                <input type="date" id="expiry" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Status</label>
+                <select id="status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div class="form-group form-actions">
+                <button type="submit" class="btn-primary">Add License</button>
+                <button type="button" class="btn-secondary" id="cancelAdd">Cancel</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Licenses Table -->
+        <div class="table-card">
+          <div class="table-wrapper">
+            <table id="licensesTable">
+              <thead>
+                <tr>
+                  <th>License Key</th>
+                  <th>Account ID</th>
+                  <th>Account Server</th>
+                  <th>Hardware ID</th>
+                  <th>EA Name</th>
+                  <th>Expiry</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <!-- Notification Container -->
@@ -70,7 +192,9 @@
             <div class="license-info">
               <strong>License Key:</strong> <span id="deleteLicenseKey"></span><br>
               <strong>Account ID:</strong> <span id="deleteAccountId"></span><br>
-              <strong>Hardware ID:</strong> <span id="deleteHardwareId"></span>
+              <strong>Account Server:</strong> <span id="deleteAccountServer"></span><br>
+              <strong>Hardware ID:</strong> <span id="deleteHardwareId"></span><br>
+              <strong>EA Name:</strong> <span id="deleteEaName"></span>
             </div>
           </div>
         </div>
@@ -102,8 +226,18 @@
           </div>
           
           <div class="form-group">
+            <label for="editAccountServer">Account Server:</label>
+            <input type="text" id="editAccountServer" required />
+          </div>
+          
+          <div class="form-group">
             <label for="editHardwareId">Hardware ID:</label>
             <input type="text" id="editHardwareId" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="editEaName">EA Name:</label>
+            <input type="text" id="editEaName" required />
           </div>
           
           <div class="form-group">
@@ -137,6 +271,6 @@
   </div>
 
   <!-- JS -->
-  <script type="module" src="./dashboard.js?v=9&t=1737036000"></script>
+  <script type="module" src="./dashboard.js?v=10&t=1737036000"></script>
 </body>
 </html>

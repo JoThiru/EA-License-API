@@ -27,10 +27,10 @@ export default async function handler(req, res) {
   }
 
   // Get request data
-  const { licenseKey, accountId, hardwareId, expiryDate, status } = req.body;
+  const { licenseKey, accountId, accountServer, hardwareId, ea_name, expiryDate, status } = req.body;
 
   // Validate required fields
-  if (!licenseKey || !accountId || !hardwareId || !expiryDate) {
+  if (!licenseKey || !accountId || !accountServer || !hardwareId || !ea_name || !expiryDate) {
     return res.status(400).json({ 
       error: 'Validation error',
       message: 'All fields are required' 
@@ -72,7 +72,9 @@ export default async function handler(req, res) {
       .from('licenses')
       .update({
         account_id: accountId,
+        account_server: accountServer,
         hardware_id: hardwareId,
+        ea_name: ea_name,
         expiry_date: expiryDate,
         status: status || 'active'
       })

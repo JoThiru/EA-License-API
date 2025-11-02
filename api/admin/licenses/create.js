@@ -3,6 +3,27 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifySession } from '../auth/verify.js';
 
+// Helper function to get IST time in format: YYYY-MM-DD HH:mm:ss.SSS
+function getISTTime() {
+  const now = new Date();
+  
+  // IST is UTC+5:30, so add 5 hours and 30 minutes (5.5 * 60 * 60 * 1000 milliseconds)
+  const ISTOffset = 5.5 * 60 * 60 * 1000;
+  const ISTTime = new Date(now.getTime() + ISTOffset);
+  
+  // Format: YYYY-MM-DD HH:mm:ss.SSS
+  // Since we added the offset, we use UTC methods to get the IST time components
+  const year = ISTTime.getUTCFullYear();
+  const month = String(ISTTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(ISTTime.getUTCDate()).padStart(2, '0');
+  const hours = String(ISTTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(ISTTime.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(ISTTime.getUTCSeconds()).padStart(2, '0');
+  const milliseconds = String(ISTTime.getUTCMilliseconds()).padStart(3, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -27,10 +48,10 @@ export default async function handler(req, res) {
   }
 
   // Get request data
-  const { licenseKey, accountId, hardwareId, expiryDate, status } = req.body;
+  const { licenseKey, accountId, accountServer, hardwareId, ea_name, expiryDate, status } = req.body;
 
   // Validate required fields
-  if (!licenseKey || !accountId || !hardwareId || !expiryDate) {
+  if (!licenseKey || !accountId || !accountServer || !hardwareId || !ea_name || !expiryDate) {
     return res.status(400).json({ 
       error: 'Validation error',
       message: 'All fields are required' 
@@ -86,10 +107,12 @@ export default async function handler(req, res) {
       .insert([{
         license_key: licenseKey,
         account_id: accountId,
+        account_server: accountServer,
         hardware_id: hardwareId,
+        ea_name: ea_name,
         expiry_date: expiryDate,
         status: status || 'active',
-        created_at: new Date().toISOString()
+        created_at: getISTTime()
       }])
       .select()
       .single();
