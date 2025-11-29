@@ -1,11 +1,13 @@
-// Client Session Verification
+// Unified Session Verification API
+// Handles both admin and client session verification
 import { createClient } from '@supabase/supabase-js';
 
-export function verifyClientSession(req) {
+function verifySession(req, userType = 'admin') {
   const cookieHeader = req.headers.cookie;
   const authHeader = req.headers.authorization;
 
   let sessionToken = null;
+  const cookieName = userType === 'admin' ? 'admin_session' : 'client_session';
 
   // Try to get from cookie first
   if (cookieHeader) {
@@ -14,7 +16,7 @@ export function verifyClientSession(req) {
       acc[key] = value;
       return acc;
     }, {});
-    sessionToken = cookies.client_session;
+    sessionToken = cookies[cookieName];
   }
 
   // Fallback to Authorization header
@@ -43,7 +45,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const verification = verifyClientSession(req);
+  // Determine user type from query parameter or path
+  const userType = req.query.type || (req.url?.includes('/client') ? 'client' : 'admin');
+  const verification = verifySession(req, userType);
 
   if (!verification.valid) {
     return res.status(401).json({
@@ -52,29 +56,32 @@ export default async function handler(req, res) {
     });
   }
 
-  // Verify session in database
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
+  // For client sessions, verify in database
+  if (userType === 'client') {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY;
 
-  if (supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-    try {
-      const { data: session } = await supabase
-        .from('client_sessions')
-        .select('client_id, expires_at')
-        .eq('session_token', verification.sessionToken)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      try {
+        const { data: session } = await supabase
+          .from('client_sessions')
+          .select('client_id, expires_at')
+          .eq('session_token', verification.sessionToken)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
 
-      if (!session) {
-        return res.status(401).json({
-          authenticated: false,
-          error: 'Session expired or invalid'
-        });
+        if (!session) {
+          return res.status(401).json({
+            authenticated: false,
+            error: 'Session expired or invalid'
+          });
+        }
+      } catch (err) {
+        // If session table doesn't exist, just validate token format
+        console.error('Session verification error:', err);
       }
-    } catch (err) {
-      // If session table doesn't exist, just validate token format
     }
   }
 
@@ -83,5 +90,4 @@ export default async function handler(req, res) {
     message: 'Session valid'
   });
 }
-
 

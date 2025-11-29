@@ -1,6 +1,33 @@
 // Get Client's Licenses API
 import { createClient } from '@supabase/supabase-js';
-import { verifyClientSession } from '../auth/verify.js';
+
+// Verify session function
+function verifySession(req, userType = 'client') {
+  const cookieHeader = req.headers.cookie;
+  const authHeader = req.headers.authorization;
+
+  let sessionToken = null;
+  const cookieName = userType === 'admin' ? 'admin_session' : 'client_session';
+
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {});
+    sessionToken = cookies[cookieName];
+  }
+
+  if (!sessionToken && authHeader) {
+    sessionToken = authHeader.replace('Bearer ', '');
+  }
+
+  if (!sessionToken || sessionToken.length < 32) {
+    return { valid: false, error: 'Invalid or missing session' };
+  }
+
+  return { valid: true, sessionToken };
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -17,7 +44,7 @@ export default async function handler(req, res) {
   }
 
   // Verify authentication
-  const verification = verifyClientSession(req);
+  const verification = verifySession(req, 'client');
   if (!verification.valid) {
     return res.status(401).json({
       error: 'Unauthorized',

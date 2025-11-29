@@ -1,4 +1,5 @@
-// Client Logout API
+// Unified Logout API
+// Handles both admin and client logout
 import { serialize } from 'cookie';
 
 export default async function handler(req, res) {
@@ -15,8 +16,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Determine user type from query parameter or path
+  const userType = req.query.type || (req.url?.includes('/client') ? 'client' : 'admin');
+  const cookieName = userType === 'admin' ? 'admin_session' : 'client_session';
+
   // Clear session cookie
-  const cookie = serialize('client_session', '', {
+  const cookie = serialize(cookieName, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -31,5 +36,4 @@ export default async function handler(req, res) {
     message: 'Logged out successfully'
   });
 }
-
 

@@ -46,7 +46,7 @@ async function checkAuth() {
 
   // Verify with server
   try {
-    const response = await fetch('/api/client/auth/verify', {
+    const response = await fetch('/api/auth/verify?type=client', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${sessionToken}`
@@ -130,7 +130,7 @@ document.addEventListener('click', (e) => {
 // Logout handlers
 async function handleLogout() {
   try {
-    await authenticatedFetch('/api/client/auth/logout', {
+    await authenticatedFetch('/api/auth/logout?type=client', {
       method: 'POST'
     });
   } catch (err) {

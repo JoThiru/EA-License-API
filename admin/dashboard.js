@@ -256,7 +256,7 @@ async function loadLicenses() {
   }
   
   try {
-    const response = await authenticatedFetch('/api/admin/licenses/list');
+    const response = await authenticatedFetch('/api/admin/licenses/list?pending=false');
     const result = await response.json();
 
     if (!response.ok) {
@@ -371,7 +371,7 @@ if (licenseForm) {
     }
 
     try {
-      const response = await authenticatedFetch('/api/admin/licenses/create', {
+      const response = await authenticatedFetch('/api/admin/licenses/save', {
         method: 'POST',
         body: JSON.stringify({
           licenseKey,
@@ -519,8 +519,8 @@ editForm.addEventListener('submit', async (e) => {
   saveEdit.textContent = '💾 Saving...';
   
   try {
-    const response = await authenticatedFetch('/api/admin/licenses/update', {
-      method: 'PUT',
+    const response = await authenticatedFetch('/api/admin/licenses/save', {
+        method: 'PUT',
       body: JSON.stringify({
         licenseKey,
         accountId,
@@ -693,7 +693,7 @@ async function showPendingView() {
     if (tableCard) tableCard.style.display = 'none';
     
     // Load and display pending requests
-    const response = await authenticatedFetch('/api/admin/licenses/pending');
+    const response = await authenticatedFetch('/api/admin/licenses/list?pending=true');
     const result = await response.json();
 
     if (response.ok && result.pendingRequests) {
@@ -776,7 +776,7 @@ function attachPendingViewListeners() {
 // Logout functionality
 async function handleAdminLogout() {
   try {
-    await authenticatedFetch('/api/admin/auth/logout', {
+    await authenticatedFetch('/api/auth/logout?type=admin', {
       method: 'POST'
     });
   } catch (err) {
@@ -793,7 +793,7 @@ if (logoutBtnProfile) {
 // Check for pending requests and update badge
 async function checkPendingRequests() {
   try {
-    const response = await authenticatedFetch('/api/admin/licenses/pending');
+    const response = await authenticatedFetch('/api/admin/licenses/list?pending=true');
     const result = await response.json();
 
     if (response.ok && result.pendingRequests) {
@@ -916,10 +916,11 @@ if (reviewForm) {
     approveBtn.textContent = 'Approving...';
 
     try {
-      const response = await authenticatedFetch('/api/admin/licenses/approve', {
+      const response = await authenticatedFetch('/api/admin/licenses/update-status', {
         method: 'POST',
         body: JSON.stringify({
           licenseKey: currentReviewLicenseKey,
+          action: 'approve',
           expiryDate
         })
       });
@@ -965,10 +966,11 @@ if (rejectRequestBtn) {
     rejectRequestBtn.textContent = 'Rejecting...';
 
     try {
-      const response = await authenticatedFetch('/api/admin/licenses/reject', {
+      const response = await authenticatedFetch('/api/admin/licenses/update-status', {
         method: 'POST',
         body: JSON.stringify({
-          licenseKey: currentReviewLicenseKey
+          licenseKey: currentReviewLicenseKey,
+          action: 'reject'
         })
       });
 
